@@ -1,0 +1,10 @@
+import type { Event, Schema } from '../internal/types.js';
+import type { Db } from '../types/db.js';
+import type { Table } from "drizzle-orm";
+export type IndexingStore = Db<Schema> & {
+    event: Event | undefined;
+};
+export declare const parseSqlError: (e: any) => Error;
+/** Throw an error if `table` is not an `onchainTable`. */
+export declare const checkOnchainTable: (table: Table, method: "find" | "insert" | "update" | "delete") => void;
+//# sourceMappingURL=index.d.ts.map

@@ -1,0 +1,96 @@
+import type { Common } from '../internal/common.js';
+import type { Event, Schema, SchemaBuild } from '../internal/types.js';
+import type { Drizzle } from '../types/db.js';
+import { PGlite } from "@electric-sql/pglite";
+import { type Table } from "drizzle-orm";
+import type { PoolClient } from "pg";
+export type IndexingCache = {
+    /**
+     * Returns true if the cache has an entry for `table` with `key`.
+     */
+    has: (params: {
+        table: Table;
+        key: object;
+    }) => boolean;
+    /**
+     * Returns the entry for `table` with `key`.
+     */
+    get: (params: {
+        table: Table;
+        key: object;
+        db: Drizzle<Schema>;
+    }) => {
+        [key: string]: unknown;
+    } | null | Promise<{
+        [key: string]: unknown;
+    } | null>;
+    /**
+     * Sets the entry for `table` with `key` to `row`.
+     */
+    set: (params: {
+        table: Table;
+        key: object;
+        row: {
+            [key: string]: unknown;
+        };
+        isUpdate: boolean;
+        metadata: {
+            event: Event | undefined;
+        };
+    }) => {
+        [key: string]: unknown;
+    };
+    /**
+     * Deletes the entry for `table` with `key`.
+     */
+    delete: (params: {
+        table: Table;
+        key: object;
+        db: Drizzle<Schema>;
+    }) => boolean | Promise<boolean>;
+    /**
+     * Writes all temporary data to the database.
+     */
+    flush: (params: {
+        client: PoolClient | PGlite;
+    }) => Promise<void>;
+    /**
+     * Make all temporary data permanent and prepare the cache for
+     * the next iteration.
+     *
+     * Note: It is assumed this is called after `flush`
+     * because it clears the buffers.
+     */
+    commit: () => void;
+    /**
+     * Remove spillover and buffer entries.
+     */
+    rollback: () => void;
+    /**
+     * Marks the cache as incomplete.
+     */
+    invalidate: () => void;
+    /**
+     * Deletes all entries from the cache.
+     */
+    clear: () => void;
+};
+export declare const getCopyText: (table: Table, rows: {
+    [key: string]: unknown;
+}[]) => string;
+export declare const getCopyHelper: ({ client }: {
+    client: PoolClient | PGlite;
+}) => (table: Table, text: string, includeSchema?: boolean) => Promise<void>;
+export declare const recoverBatchError: <T>(values: T[], callback: (values: T[]) => Promise<unknown>) => Promise<{
+    status: "success";
+} | {
+    status: "error";
+    error: Error;
+    value: T;
+}>;
+export declare const createIndexingCache: ({ common, schemaBuild: { schema }, checkpoint, }: {
+    common: Common;
+    schemaBuild: Pick<SchemaBuild, "schema">;
+    checkpoint: string;
+}) => IndexingCache;
+//# sourceMappingURL=cache.d.ts.map
