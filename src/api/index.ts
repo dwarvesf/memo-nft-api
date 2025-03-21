@@ -1,55 +1,49 @@
 import { db } from "ponder:api";
 import schema from "ponder:schema";
 import { Hono } from "hono";
-import { count, desc, eq, graphql, or, replaceBigInts } from "ponder";
-import { formatEther, getAddress } from "viem";
+import { count, eq, graphql, replaceBigInts } from "ponder";
 
 const app = new Hono();
 
 app.use("/graphql", graphql({ db, schema }));
 
-app.get("/count", async (c) => {
-  const result = await db.select({ count: count() }).from(schema.transferEvent);
+app.get("/count/:tokenId", async (c) => {
+  const tokenId = c.req.param("tokenId");
 
-  if (result.length === 0) return c.text("0");
-  return c.text(String(result[0]!.count));
-});
-
-app.get("/count/:address", async (c) => {
-  const account = getAddress(c.req.param("address"));
-
-  const result = await db
+  const [result] = await db
     .select({ count: count() })
-    .from(schema.transferEvent)
-    .where(
-      or(
-        eq(schema.transferEvent.from, account),
-        eq(schema.transferEvent.to, account),
-      ),
-    );
+    .from(schema.memoMintedEvent)
+    .where(eq(schema.memoMintedEvent.tokenId, BigInt(tokenId)));
 
-  if (result.length === 0) return c.text("0");
-  return c.text(String(result[0]!.count));
+  return c.json({
+    count: result?.count ?? 0,
+  });
 });
 
-app.get("/whale-transfers", async (c) => {
-  // Top 10 transfers from whale accounts
+app.get("/minters/:tokenId", async (c) => {
+  const tokenId = c.req.param("tokenId");
+  const limit = c.req.query("limit") ?? 10;
+  const offset = c.req.query("offset") ?? 0;
+
   const result = await db
     .select({
-      sender: schema.account.address,
-      senderBalance: schema.account.balance,
-      amount: schema.transferEvent.amount,
+      minter: schema.memoMintedEvent.to,
+      amount: schema.memoMintedEvent.amount,
     })
-    .from(schema.transferEvent)
-    .innerJoin(
-      schema.account,
-      eq(schema.transferEvent.from, schema.account.address),
-    )
-    .orderBy(desc(schema.account.balance))
-    .limit(10);
+    .from(schema.memoMintedEvent)
+    .where(eq(schema.memoMintedEvent.tokenId, BigInt(tokenId)))
+    .limit(Number(limit))
+    .offset(Number(offset));
 
-  if (result.length === 0) return c.text("Not found", 500);
-  return c.json(replaceBigInts(result, (b) => formatEther(b)));
+  const [countResult] = await db
+    .select({ count: count() })
+    .from(schema.memoMintedEvent)
+    .where(eq(schema.memoMintedEvent.tokenId, BigInt(tokenId)));
+
+  return c.json({
+    data: replaceBigInts(result, (b) => b.toString()),
+    total: countResult?.count ?? 0,
+  });
 });
 
 export default app;
