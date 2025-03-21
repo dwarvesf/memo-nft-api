@@ -1,8 +1,0 @@
-import type { SyncStore } from '../sync-store/index.js';
-import type { RequestQueue } from '../utils/requestQueue.js';
-import { type Transport } from "viem";
-export declare const cachedTransport: ({ requestQueue, syncStore, }: {
-    requestQueue: RequestQueue;
-    syncStore: SyncStore;
-}) => Transport;
-//# sourceMappingURL=transport.d.ts.map
