@@ -46,4 +46,8 @@ app.get("/minters/:tokenId", async (c) => {
   });
 });
 
+app.get("/healthz", async (c) => {
+  return c.json({ status: "ok" });
+});
+
 export default app;
