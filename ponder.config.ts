@@ -4,9 +4,9 @@ import { dwarvesMemoABI } from "./abis/dwarvesMemoABI";
 
 export default createConfig({
   networks: {
-    mainnet: {
-      chainId: 1,
-      transport: http(process.env.PONDER_RPC_URL_1),
+    base: {
+      chainId: 8453,
+      transport: http(process.env.PONDER_RPC_URL_8453),
     },
     baseSepolia: {
       chainId: 84532,
@@ -15,10 +15,10 @@ export default createConfig({
   },
   contracts: {
     DwarvesMemo: {
-      network: "baseSepolia",
+      network: process.env.APP_ENV === 'PROD' ? "base" : "baseSepolia",
+      address: process.env.MEMO_NFT_ADDRESS as '0x' || '0x',
+      startBlock: Number(process.env.START_BLOCK || 0),
       abi: dwarvesMemoABI,
-      address: "0xb1e052156676750d193d800d7d91ea0c7ceeadf0",
-      startBlock: 23233931,
     },
   },
 });
