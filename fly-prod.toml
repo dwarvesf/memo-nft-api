@@ -1,4 +1,4 @@
-# fly.toml app configuration file generated for memo-nft-api on 2025-03-24T16:21:48+07:00
+# fly.toml app configuration file generated for memo-nft-api-prod on 2025-03-26T14:39:42+07:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
@@ -9,12 +9,11 @@ primary_region = 'sin'
 [build]
 
 [env]
-  PONDER_RPC_URL_8453 = "https://base.g.alchemy.com/v2/sYXl7-YsC4ki_MbJToI2XJ7DgxjQ8f7R"
-  PONDER_RPC_URL_84532 = "https://base-sepolia.g.alchemy.com/v2/sYXl7-YsC4ki_MbJToI2XJ7DgxjQ8f7R"
-  MEMO_NFT_ADDRESS = "0xb1e052156676750d193d800d7d91ea0c7ceeadf0"
-  START_BLOCK = "23233931"
-  APP_ENV = "PROD"
-
+  APP_ENV = 'PROD'
+  MEMO_NFT_ADDRESS = '0x07f3ed54e0b2D07cC522c4FC12EbA80E6D3A8DeB'
+  PONDER_RPC_URL_8453 = 'https://base.g.alchemy.com/v2/sYXl7-YsC4ki_MbJToI2XJ7DgxjQ8f7R'
+  PONDER_RPC_URL_84532 = 'https://base-sepolia.g.alchemy.com/v2/sYXl7-YsC4ki_MbJToI2XJ7DgxjQ8f7R'
+  START_BLOCK = '28092387'
 
 [http_service]
   internal_port = 3000
@@ -23,12 +22,6 @@ primary_region = 'sin'
   auto_start_machines = true
   min_machines_running = 0
   processes = ['app']
-
-[[vm]]
-  memory = '1gb'
-  cpu_kind = 'shared'
-  cpus = 1
-
 
 [checks]
   [checks.healthz]
@@ -39,3 +32,8 @@ primary_region = 'sin'
     grace_period = '30s'
     method = 'get'
     path = '/healthz'
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
