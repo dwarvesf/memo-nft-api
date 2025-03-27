@@ -11,7 +11,7 @@ primary_region = 'sin'
 [env]
   APP_ENV = 'PROD'
   MEMO_NFT_ADDRESS = '0x07f3ed54e0b2D07cC522c4FC12EbA80E6D3A8DeB'
-  PONDER_RPC_URL_8453 = 'https://base.g.alchemy.com/v2/sYXl7-YsC4ki_MbJToI2XJ7DgxjQ8f7R'
+  PONDER_RPC_URL_8453 = 'https://base-mainnet.g.alchemy.com/v2/sYXl7-YsC4ki_MbJToI2XJ7DgxjQ8f7R'
   PONDER_RPC_URL_84532 = 'https://base-sepolia.g.alchemy.com/v2/sYXl7-YsC4ki_MbJToI2XJ7DgxjQ8f7R'
   START_BLOCK = '28092387'
 
