@@ -30,13 +30,16 @@ ponder.on("DwarvesMemo:TokenMinted", async ({ event, context }) => {
     },
   }));
 
+  // TODO: fetch nft data from event.args.tokenId by calling contract
+  // nftData = ???
+
   console.log("Sending message to Discord...")
   await mcpDiscord.callTool({
     name: "discord-send-message",
     arguments: {
       username: "Memo NFT",
       webhookUrl: process.env.DISCORD_WEBHOOK_URL,
-      content: `${event.args.to} minted ${event.args.amount} Memo NFT `,
+      content: `${event.args.to} minted ${event.args.amount} Memo NFT `, // TODO: add nftData
       embeds: [],
     }
   });
