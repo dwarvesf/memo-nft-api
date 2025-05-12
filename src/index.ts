@@ -9,4 +9,14 @@ ponder.on("DwarvesMemo:TokenMinted", async ({ event, context }) => {
     amount: event.args.amount,
     timestamp: Number(event.block.timestamp),
   });
+
+  /* TODO: call hooks
+   * api tao + delete hooks
+   * loops hooks
+   * call all the hooks
+   */
+});
+
+ponder.on("MyAccount:transaction:from", async ({ event, context }) => {
+  console.log(event);
 });
