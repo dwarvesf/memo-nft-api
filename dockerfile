@@ -1,10 +1,13 @@
 # Build stage
-FROM node:20-slim
+FROM node:22-slim
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
+
+# Pre-install the Discord webhook package globally to avoid issues at runtime
+RUN npm install -g @lmquang/mcp-discord-webhook@latest
 
 # Copy package files
 COPY package.json pnpm-lock.yaml* ./

@@ -47,6 +47,19 @@ type MochiProfile = {
   avatar: string;
 }
 
+
+// Side Effects: send mint notification to Discord
+await mcpDiscord.connect(
+  new StdioClientTransport({
+    command: "npx",
+    args: ["-y", "@lmquang/mcp-discord-webhook@latest"],
+    env: {
+      PATH: process.env.PATH || "/usr/local/bin:/usr/bin:/bin",
+      OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
+    },
+  })
+);
+
 ponder.on("DwarvesMemo:TokenMinted", async ({ event, context }) => {
   // Main: save event to db for later use
   await context.db.insert(memoMintedEvent).values({
@@ -57,17 +70,6 @@ ponder.on("DwarvesMemo:TokenMinted", async ({ event, context }) => {
     timestamp: Number(event.block.timestamp),
   });
 
-  // Side Effects: send mint notification to Discord
-  await mcpDiscord.connect(
-    new StdioClientTransport({
-      command: "npx",
-      args: ["@lmquang/mcp-discord-webhook@latest"],
-      env: {
-        PATH: process.env.PATH || "/usr/local/bin:/usr/bin:/bin",
-        OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
-      },
-    })
-  );
 
   // Fetch NFT metadata uri from contract ussing the tokenId
   // sample https://arweave.developerdao.com/3W-Sb3cL1yXtJSjG_ffZjSpCnY02z9yv2KpW87E4Ofw
@@ -89,12 +91,12 @@ ponder.on("DwarvesMemo:TokenMinted", async ({ event, context }) => {
     const profileResponse = await fetch(`https://api.mochi-profile.console.so/api/v1/profiles/get-by-evm/${event.args.to as `0x${string}`}?no_fetch_amount=false`);
     if (profileResponse.ok) {
       const profileData = await profileResponse.json() as MochiProfile;
-      
+
       // Find Discord account from associated accounts
       const discordAccount = profileData.associated_accounts.find(
         account => account.platform === "discord"
       );
-      
+
       if (discordAccount?.platform_metadata?.username) {
         collectorUsername = discordAccount.platform_metadata.username;
       }
