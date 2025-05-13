@@ -35,6 +35,18 @@ type NFTMetadata = {
   timestamp: number;
 };
 
+type MochiProfile = {
+  id: string;
+  associated_accounts: Array<{
+    platform: string;
+    platform_identifier: string;
+    platform_metadata: {
+      username?: string;
+    };
+  }>;
+  avatar: string;
+}
+
 ponder.on("DwarvesMemo:TokenMinted", async ({ event, context }) => {
   // Main: save event to db for later use
   await context.db.insert(memoMintedEvent).values({
@@ -52,11 +64,12 @@ ponder.on("DwarvesMemo:TokenMinted", async ({ event, context }) => {
       args: ["@lmquang/mcp-discord-webhook@latest"],
       env: {
         PATH: process.env.PATH || "/usr/local/bin:/usr/bin:/bin",
+        OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
       },
     })
   );
 
-  // Fetch NFT metadata uri from contract using the tokenId
+  // Fetch NFT metadata uri from contract ussing the tokenId
   // sample https://arweave.developerdao.com/3W-Sb3cL1yXtJSjG_ffZjSpCnY02z9yv2KpW87E4Ofw
   const metadataURI = await publicClient.readContract({
     address: process.env.MEMO_NFT_ADDRESS as `0x${string}`,
@@ -70,13 +83,43 @@ ponder.on("DwarvesMemo:TokenMinted", async ({ event, context }) => {
     (res) => res.json() as Promise<NFTMetadata>
   );
 
-  console.log("Sending message to Discord...");
+  // fetch user info from collector address
+  let collectorUsername: string = event.args.to;
+  try {
+    const profileResponse = await fetch(`https://api.mochi-profile.console.so/api/v1/profiles/get-by-evm/${event.args.to as `0x${string}`}?no_fetch_amount=false`);
+    if (profileResponse.ok) {
+      const profileData = await profileResponse.json() as MochiProfile;
+      
+      // Find Discord account from associated accounts
+      const discordAccount = profileData.associated_accounts.find(
+        account => account.platform === "discord"
+      );
+      
+      if (discordAccount?.platform_metadata?.username) {
+        collectorUsername = discordAccount.platform_metadata.username;
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching collector profile:", error);
+  }
+
+  let message = `
+  Please compose a message to send to Discord with the following information:]\n
+  { 
+   "collector": "${collectorUsername}", // set in field
+   "name": "${nftMetadata.name}", 
+   "image": "${nftMetadata.image.replace("ar://", "https://arweave.net/")}",
+   "authors": "${nftMetadata.authors}" // set in field
+  }
+  `;
+
   await mcpDiscord.callTool({
-    name: "discord-send-message",
+    name: "discord-send-embed",
     arguments: {
       username: "Memo NFT",
       webhookUrl: process.env.DISCORD_WEBHOOK_URL,
-      content: `${event.args.to} minted ${event.args.amount} Memo ${nftMetadata.name}`,
+      content: message,
+      autoFormat: true,
       embeds: [],
     },
   });
