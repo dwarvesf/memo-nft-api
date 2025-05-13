@@ -45,8 +45,7 @@ type MochiProfile = {
     };
   }>;
   avatar: string;
-}
-
+};
 
 // Side Effects: send mint notification to Discord
 await mcpDiscord.connect(
@@ -70,7 +69,6 @@ ponder.on("DwarvesMemo:TokenMinted", async ({ event, context }) => {
     timestamp: Number(event.block.timestamp),
   });
 
-
   // Fetch NFT metadata uri from contract ussing the tokenId
   // sample https://arweave.developerdao.com/3W-Sb3cL1yXtJSjG_ffZjSpCnY02z9yv2KpW87E4Ofw
   const metadataURI = await publicClient.readContract({
@@ -88,13 +86,17 @@ ponder.on("DwarvesMemo:TokenMinted", async ({ event, context }) => {
   // fetch user info from collector address
   let collectorUsername: string = event.args.to;
   try {
-    const profileResponse = await fetch(`https://api.mochi-profile.console.so/api/v1/profiles/get-by-evm/${event.args.to as `0x${string}`}?no_fetch_amount=false`);
+    const profileResponse = await fetch(
+      `https://api.mochi-profile.console.so/api/v1/profiles/get-by-evm/${
+        event.args.to as `0x${string}`
+      }?no_fetch_amount=false`
+    );
     if (profileResponse.ok) {
-      const profileData = await profileResponse.json() as MochiProfile;
+      const profileData = (await profileResponse.json()) as MochiProfile;
 
       // Find Discord account from associated accounts
       const discordAccount = profileData.associated_accounts.find(
-        account => account.platform === "discord"
+        (account) => account.platform === "discord"
       );
 
       if (discordAccount?.platform_metadata?.username) {

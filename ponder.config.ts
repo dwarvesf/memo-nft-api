@@ -3,6 +3,10 @@ import { http } from "viem";
 import { dwarvesMemoABI } from "./abis/dwarvesMemoABI";
 
 export default createConfig({
+  database: {
+    kind: "postgres",
+    connectionString: process.env.PONDER_DATABASE_URL,
+  },
   networks: {
     base: {
       chainId: 8453,
@@ -15,8 +19,8 @@ export default createConfig({
   },
   contracts: {
     DwarvesMemo: {
-      network: process.env.APP_ENV === 'PROD' ? "base" : "baseSepolia",
-      address: process.env.MEMO_NFT_ADDRESS as '0x' || '0x',
+      network: process.env.APP_ENV === "PROD" ? "base" : "baseSepolia",
+      address: (process.env.MEMO_NFT_ADDRESS as "0x") || "0x",
       startBlock: Number(process.env.START_BLOCK || 0),
       abi: dwarvesMemoABI,
     },
