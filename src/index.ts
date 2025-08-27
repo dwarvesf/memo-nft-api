@@ -19,10 +19,114 @@ const publicClient = createPublicClient({
   ),
 });
 
-const mcpDiscord = new Client({
-  name: "Discord MCP Client",
-  version: "1.0.0",
-});
+// Configuration for Discord notifications
+const ENABLE_DISCORD_NOTIFICATIONS = process.env.ENABLE_DISCORD_NOTIFICATIONS !== "false";
+const MCP_CONNECTION_TIMEOUT = parseInt(process.env.MCP_CONNECTION_TIMEOUT || "10000");
+const MCP_RETRY_ATTEMPTS = parseInt(process.env.MCP_RETRY_ATTEMPTS || "3");
+
+class DiscordNotifier {
+  private client: Client;
+  private isConnected: boolean = false;
+  private connectionAttempts: number = 0;
+  private lastConnectionAttempt: number = 0;
+
+  constructor() {
+    this.client = new Client({
+      name: "Discord MCP Client",
+      version: "1.0.0",
+    });
+  }
+
+  private async ensureConnected(): Promise<boolean> {
+    if (this.isConnected) {
+      return true;
+    }
+
+    // Check if we should retry (exponential backoff)
+    const now = Date.now();
+    const backoffDelay = Math.min(1000 * Math.pow(2, this.connectionAttempts), 60000);
+    if (now - this.lastConnectionAttempt < backoffDelay) {
+      return false;
+    }
+
+    if (this.connectionAttempts >= MCP_RETRY_ATTEMPTS) {
+      console.warn("Discord MCP: Maximum retry attempts reached, disabling notifications");
+      return false;
+    }
+
+    try {
+      this.lastConnectionAttempt = now;
+      this.connectionAttempts++;
+      
+      console.log(`Discord MCP: Attempting connection (${this.connectionAttempts}/${MCP_RETRY_ATTEMPTS})...`);
+      
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Connection timeout')), MCP_CONNECTION_TIMEOUT)
+      );
+
+      await Promise.race([
+        this.client.connect(
+          new StdioClientTransport({
+            command: "npx",
+            args: ["-y", "@lmquang/mcp-discord-webhook@latest"],
+            env: {
+              PATH: process.env.PATH || "/usr/local/bin:/usr/bin:/bin",
+              OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
+            },
+          })
+        ),
+        timeoutPromise
+      ]);
+
+      this.isConnected = true;
+      this.connectionAttempts = 0; // Reset on successful connection
+      console.log("Discord MCP: Connected successfully");
+      return true;
+    } catch (error) {
+      console.warn(`Discord MCP: Connection failed (attempt ${this.connectionAttempts}):`, error instanceof Error ? error.message : error);
+      return false;
+    }
+  }
+
+  async sendNotification(message: string, webhookUrl: string): Promise<void> {
+    if (!ENABLE_DISCORD_NOTIFICATIONS) {
+      console.log("Discord notifications disabled via configuration");
+      return;
+    }
+
+    if (!webhookUrl) {
+      console.warn("Discord MCP: DISCORD_WEBHOOK_URL not configured, skipping notification");
+      return;
+    }
+
+    try {
+      const connected = await this.ensureConnected();
+      if (!connected) {
+        console.warn("Discord MCP: Unable to connect, skipping notification");
+        return;
+      }
+
+      await this.client.callTool({
+        name: "discord-send-embed",
+        arguments: {
+          username: "Memo NFT",
+          webhookUrl,
+          content: message,
+          autoFormat: true,
+          embeds: [],
+        },
+      });
+
+      console.log("Discord MCP: Notification sent successfully");
+    } catch (error) {
+      console.error("Discord MCP: Failed to send notification:", error instanceof Error ? error.message : error);
+      // Mark as disconnected to trigger reconnection on next attempt
+      this.isConnected = false;
+    }
+  }
+}
+
+const discordNotifier = new DiscordNotifier();
 
 type NFTMetadata = {
   type: string;
@@ -47,17 +151,7 @@ type MochiProfile = {
   avatar: string;
 };
 
-// Side Effects: send mint notification to Discord
-await mcpDiscord.connect(
-  new StdioClientTransport({
-    command: "npx",
-    args: ["-y", "@lmquang/mcp-discord-webhook@latest"],
-    env: {
-      PATH: process.env.PATH || "/usr/local/bin:/usr/bin:/bin",
-      OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
-    },
-  })
-);
+// Discord notifications are now handled lazily in the DiscordNotifier class
 
 ponder.on("DwarvesMemo:TokenMinted", async ({ event, context }) => {
   // Main: save event to db for later use
@@ -107,7 +201,8 @@ ponder.on("DwarvesMemo:TokenMinted", async ({ event, context }) => {
     console.error("Error fetching collector profile:", error);
   }
 
-  let message = `
+  // Send Discord notification (non-blocking, optional)
+  const message = `
   Please compose a message to send to Discord with the following information:]\n
   { 
    "collector": "${collectorUsername}", // set in field
@@ -117,14 +212,6 @@ ponder.on("DwarvesMemo:TokenMinted", async ({ event, context }) => {
   }
   `;
 
-  await mcpDiscord.callTool({
-    name: "discord-send-embed",
-    arguments: {
-      username: "Memo NFT",
-      webhookUrl: process.env.DISCORD_WEBHOOK_URL,
-      content: message,
-      autoFormat: true,
-      embeds: [],
-    },
-  });
+  // Use the DiscordNotifier with proper error handling - this won't block the main indexing flow
+  await discordNotifier.sendNotification(message, process.env.DISCORD_WEBHOOK_URL || "");
 });
