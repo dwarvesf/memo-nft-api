@@ -80,6 +80,10 @@ Optional Discord notification variables:
 
 ## Database Schema
 
+Uses environment-specific schema naming:
+- Development: `memo_nft_dev`
+- Production: `memo_nft_PROD`
+
 Single table `memo_minted_events` with:
 - `id`: Primary key (event ID)
 - `to`: Minter address (hex)
@@ -112,3 +116,9 @@ The Discord notification system is designed to be resilient and optional:
 - **Graceful Degradation**: Core indexing continues even when Discord is unavailable
 - **Connection Timeout**: Configurable timeout prevents hanging on connection attempts
 - **Error Handling**: All MCP operations wrapped with comprehensive error handling
+
+## Production Deployment Notes
+
+- **Schema Naming**: Uses environment-specific schemas (`memo_nft_${APP_ENV}`) to prevent conflicts
+- **Database Migration**: Schema conflicts resolved by using unique names per environment
+- **Service Independence**: Discord notifications are completely optional and won't block startup

@@ -25,5 +25,5 @@ ENV PORT=3000
 # Expose the port the app runs on
 EXPOSE 3000
 
-# Start the application
-CMD ["pnpm", "start", "--schema", "memo_nft"]
+# Start the application with environment-specific schema
+CMD ["sh", "-c", "pnpm start --schema memo_nft_${APP_ENV:-dev}"]

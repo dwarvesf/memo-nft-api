@@ -20,9 +20,11 @@ const publicClient = createPublicClient({
 });
 
 // Configuration for Discord notifications
-const ENABLE_DISCORD_NOTIFICATIONS = process.env.ENABLE_DISCORD_NOTIFICATIONS !== "false";
+const ENABLE_DISCORD_NOTIFICATIONS = process.env.ENABLE_DISCORD_NOTIFICATIONS?.toLowerCase() !== "false";
 const MCP_CONNECTION_TIMEOUT = parseInt(process.env.MCP_CONNECTION_TIMEOUT || "10000");
 const MCP_RETRY_ATTEMPTS = parseInt(process.env.MCP_RETRY_ATTEMPTS || "3");
+
+console.log(`Discord notifications: ${ENABLE_DISCORD_NOTIFICATIONS ? 'ENABLED' : 'DISABLED'}`);
 
 class DiscordNotifier {
   private client: Client;
