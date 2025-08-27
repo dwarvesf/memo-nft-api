@@ -15,9 +15,36 @@ const publicClient = createPublicClient({
   transport: http(
     process.env.APP_ENV === "PROD"
       ? process.env.PONDER_RPC_URL_8453
-      : process.env.PONDER_RPC_URL_84532
+      : process.env.PONDER_RPC_URL_84532,
+    {
+      retryCount: 5,
+      retryDelay: 300,
+      timeout: 30_000
+    }
   ),
 });
+
+// Rate limiting for RPC calls to prevent 429 errors
+class RateLimitedRPCClient {
+  private lastRequestTime = 0;
+  private readonly minInterval = 100; // Minimum 100ms between requests
+
+  async readContract(params: any) {
+    // Ensure minimum delay between requests
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    
+    if (timeSinceLastRequest < this.minInterval) {
+      const delay = this.minInterval - timeSinceLastRequest;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+    
+    this.lastRequestTime = Date.now();
+    return publicClient.readContract(params);
+  }
+}
+
+const rateLimitedClient = new RateLimitedRPCClient();
 
 // Configuration for Discord notifications
 const ENABLE_DISCORD_NOTIFICATIONS = process.env.ENABLE_DISCORD_NOTIFICATIONS?.toLowerCase() !== "false";
@@ -167,12 +194,19 @@ ponder.on("DwarvesMemo:TokenMinted", async ({ event, context }) => {
 
   // Fetch NFT metadata uri from contract ussing the tokenId
   // sample https://arweave.developerdao.com/3W-Sb3cL1yXtJSjG_ffZjSpCnY02z9yv2KpW87E4Ofw
-  const metadataURI = await publicClient.readContract({
-    address: process.env.MEMO_NFT_ADDRESS as `0x${string}`,
-    abi: dwarvesMemoABI,
-    functionName: "readNFT",
-    args: [event.args.tokenId],
-  });
+  let metadataURI: string;
+  try {
+    metadataURI = await rateLimitedClient.readContract({
+      address: process.env.MEMO_NFT_ADDRESS as `0x${string}`,
+      abi: dwarvesMemoABI,
+      functionName: "readNFT",
+      args: [event.args.tokenId],
+    });
+  } catch (error) {
+    console.error(`Failed to read NFT metadata for tokenId ${event.args.tokenId}:`, error);
+    // Skip Discord notification if we can't fetch metadata
+    return;
+  }
 
   // Improvement: can use zod to validate the metadata
   const nftMetadata = await fetch(metadataURI).then(
