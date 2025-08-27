@@ -3,10 +3,17 @@ import { http } from "viem";
 import { dwarvesMemoABI } from "./abis/dwarvesMemoABI";
 
 export default createConfig({
-  database: {
-    kind: "postgres",
-    connectionString: process.env.PONDER_DATABASE_URL,
-  },
+  database: process.env.PONDER_DATABASE_URL
+    ? {
+        kind: "postgres",
+        connectionString: process.env.PONDER_DATABASE_URL,
+        poolConfig: {
+          max: 5,
+          connectionTimeoutMillis: 10000,
+          idleTimeoutMillis: 30000,
+        },
+      }
+    : undefined, // Use default PGLite when no DATABASE_URL
   networks: {
     base: {
       chainId: 8453,

@@ -22,8 +22,11 @@ COPY . .
 ENV NODE_ENV=production
 ENV PORT=3000
 
+# Create directory for PGLite database
+RUN mkdir -p /app/.ponder/pglite
+
 # Expose the port the app runs on
 EXPOSE 3000
 
-# Start the application with environment-specific schema, port, and host
-CMD ["sh", "-c", "pnpm start --schema memo_nft_${APP_ENV:-dev} --port 3000 --hostname 0.0.0.0"]
+# Start the application with environment-specific schema and port
+CMD ["pnpm", "start", "--schema", "memo_nft_PROD", "--port", "3000"]
